@@ -15,11 +15,11 @@ export interface Photo {
 const PHOTO_STORAGE = "photos"
 
 export function usePhotoGallery() {
+
     const { get, set } = useStorage()
     const { deleteFile, getUri, readFile, writeFile } = useFilesystem()
     const { getPhoto } = useCamera()
     const [photos, setPhotos] = useState<Photo[]>([])
-
 
     useEffect(() => {
         const loadSaved = async () => {
@@ -38,8 +38,7 @@ export function usePhotoGallery() {
         }
         loadSaved()
     }, [get, readFile])
-  
-  
+
     const takePhoto = async () => {
         const cameraPhoto = await getPhoto({
           resultType: CameraResultType.Uri,
@@ -50,12 +49,17 @@ export function usePhotoGallery() {
         const savedFileImage = await savePicture(cameraPhoto, fileName)
         const newPhotos = [savedFileImage, ...photos]
         setPhotos(newPhotos)
-        set(PHOTO_STORAGE, JSON.stringify(newPhotos.map(p => {
-            const photoCopy = { ...p }
-            delete photoCopy.base64
-            return photoCopy
-        })))  
+        set(PHOTO_STORAGE,
+            isPlatform('hybrid')
+                ? JSON.stringify(newPhotos)
+                : JSON.stringify(newPhotos.map(p => {
+                    const photoCopy = { ...p }
+                    delete photoCopy.base64
+                        return photoCopy
+                }))
+            )
     }
+
     const savePicture = async (photo: CameraPhoto, fileName: string) => {
         let base64Data: string
         if (isPlatform('hybrid')) {
@@ -73,6 +77,7 @@ export function usePhotoGallery() {
         })
         return getPhotoFile(photo, fileName)
     }
+
     const getPhotoFile = async (cameraPhoto: CameraPhoto, fileName: string): Promise<Photo> => {
         if (isPlatform('hybrid')) {
             const fileUri = await getUri({
@@ -90,8 +95,10 @@ export function usePhotoGallery() {
             }
         }
     }
+
     return {
         photos,
         takePhoto
     }
+
 }
