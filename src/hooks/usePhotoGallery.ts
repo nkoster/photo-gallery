@@ -49,15 +49,21 @@ export function usePhotoGallery() {
         const newPhotos = [savedFileImage, ...photos]
         setPhotos(newPhotos)
         set(PHOTO_STORAGE, JSON.stringify(newPhotos.map(p => {
-            // Don't save the base64 representation of the photo data, 
-            // since it's already saved on the Filesystem
             const photoCopy = { ...p }
             delete photoCopy.base64
             return photoCopy
         })))  
     }
     const savePicture = async (photo: CameraPhoto, fileName: string) => {
-        const base64Data = await base64FromPath(photo.webPath!)
+        let base64Data: string
+        if (isPlatform('hybrid')) {
+            const file = await readFile({
+                path: photo.path!
+            })
+            base64Data = file.data
+        } else {
+            base64Data = await base64FromPath(photo.webPath!)
+        }
         await writeFile({
             path: fileName,
             data: base64Data,
@@ -66,9 +72,20 @@ export function usePhotoGallery() {
         return getPhotoFile(photo, fileName)
     }
     const getPhotoFile = async (cameraPhoto: CameraPhoto, fileName: string): Promise<Photo> => {
-        return {
-            filepath: fileName,
-            webviewPath: cameraPhoto.webPath
+        if (isPlatform('hybrid')) {
+            const fileUri = await getUri({
+                directory: FilesystemDirectory.Data,
+                path: fileName
+            })
+            return {
+                filepath: fileUri.uri,
+                webviewPath: Capacitor.convertFileSrc(fileUri.uri),
+            }
+        } else {
+            return {
+                filepath: fileName,
+                webviewPath: cameraPhoto.webPath
+            }
         }
     }
     return {
