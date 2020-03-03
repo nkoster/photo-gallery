@@ -24,15 +24,17 @@ export function usePhotoGallery() {
     useEffect(() => {
         const loadSaved = async () => {
             const photosString = await get('photos')
-            const photos = (photosString ? JSON.parse(photosString) : []) as Photo[]
-            for (let photo of photos) {
-                const file = await readFile({
-                path: photo.filepath,
-                directory: FilesystemDirectory.Data
-                })
-                photo.base64 = `data:image/jpeg;base64,${file.data}`
+            const photosInStorage = (photosString ? JSON.parse(photosString) : []) as Photo[]
+            if (!isPlatform('hybrid')) {
+                for (let photo of photosInStorage) {
+                    const file = await readFile({
+                        path: photo.filepath,
+                        directory: FilesystemDirectory.Data
+                    })
+                    photo.base64 = `data:image/jpeg;base64,${file.data}`
+                }
             }
-            setPhotos(photos)
+            setPhotos(photosInStorage)
         }
         loadSaved()
     }, [get, readFile])
